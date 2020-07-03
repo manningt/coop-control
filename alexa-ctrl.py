@@ -1,63 +1,127 @@
+#!/usr/bin/env python3
+
 import logging
 import os
 
 from flask import Flask
 from flask_ask import Ask, request, session, question, statement
+import threading
 import RPi.GPIO as GPIO
 
 app = Flask(__name__)
 ask = Ask(app, "/")
-#logging.getLogger('flask_ask').setLevel(logging.DEBUG)
-logging.getLogger('flask_ask').setLevel(logging.INFO)
+# logger.getLogger('flask_ask').setLevel(logger.DEBUG)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+file_handler = logging.FileHandler('coop_ctrl.log')
+formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
 
 STATUSON = ['on', 'high']
 STATUSOFF = ['off', 'low']
+DEVICELIGHT = ['light', 'lights']
+DEVICEHEAT = ['heat', 'heater']
+DEVICEDOOR = ['door']
+DEVICETEST = ['test']
 
-PIN_LIGHT_RELAY = 23
-# refer to this page for gpio_function returns
+PIN_DOOR_RELAY = 23
+PIN_LIGHT_RELAY = 24
+PIN_HEATER_RELAY = 25
+
+def operate_door(delay):
+    logger.debug("operate_door thread started")
+    from time import sleep
+    import RPi.GPIO as GPIO
+
+    pin = PIN_DOOR_RELAY
+    # pin = PIN_HEATER_RELAY #AC relay pin for testing
+
+    try:
+        # shouldn't have to do the following 3 - they were done in the intent.  Because its a different thread?
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(pin, GPIO.OUT, initial=0)
+        GPIO.output(pin, 0)
+        logger.debug("Initializing relay to 0 for 4 seconds.")
+        sleep(4)
+
+        GPIO.output(pin, 1)
+        logger.info("operate_door thread: Setting relay to 1 for {} seconds.".format(delay))
+        sleep(delay)
+
+        GPIO.output(pin, 0)
+        logger.debug("Final: turning off relay.")
+    except Exception as e:
+        logger.exception(e)
+        logger.error("Exception in door relay control thread: {}".format(str(e)))
+
 
 @ask.launch
 def launch():
-    speech_text = 'Welcome to Raspberry Pi Automation.'
+    speech_text = 'Hen house control is operational.'
     return question(speech_text).reprompt(speech_text).simple_card(speech_text)
 
 
-@ask.intent('GpioIntent', mapping={'next_state': 'next_state'})
-def GpioIntent(next_state):
-    response = 'Sorry, bogus requested state: {}.'.format(next_state)
+@ask.intent('GpioIntent')
+def GpioIntent(device, next_state):
+    if next_state is None:
+        logger.info("Slot_Device: {}  --- Slot_next_state is None".format(device))
+    else:
+        # logger.info("Slot_Device: {} --- Slot_next_state: {}".format(device, request.intent.slots.next_state.value))
+        logger.info("Slot_Device: {} --- Slot_next_state: {}".format(device, next_state))
+
+    if device in DEVICELIGHT:
+        relay_pin = PIN_LIGHT_RELAY
+    elif device in DEVICEHEAT:
+        relay_pin = PIN_HEATER_RELAY
+    elif device in DEVICEDOOR:
+        relay_pin = PIN_DOOR_RELAY
+    elif device is None:
+        relay_pin = PIN_LIGHT_RELAY
+    elif device in DEVICETEST:
+        return statement('Hen house control is operational.')
+    else:
+        return statement('Unsupported requested device: {}.'.format(device))
+
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
     # if (GPIO.gpio_function(PIN_LIGHT_RELAY) != GPIO.OUT):
-    GPIO.setup(PIN_LIGHT_RELAY, GPIO.OUT)
-    curr_pin_state = GPIO.input(PIN_LIGHT_RELAY)
-    # print("Received new state: {}".format(next_state))
-    next_pin_state = None
-    if next_state in STATUSON:
-        next_pin_state = GPIO.HIGH
-    if next_state in STATUSOFF:
-        next_pin_state = GPIO.LOW
-    print("Current state: {} -- Next state: {} ".format(curr_pin_state, next_pin_state))
-    if curr_pin_state == next_pin_state:
-        response = 'the light is already {}'.format(next_state)
+    GPIO.setup(relay_pin, GPIO.OUT)
+    if device in DEVICEDOOR:
+        # door should be turned on for 8 seconds and then turned off
+        door_oper_thread = threading.Thread(target=operate_door, args=(9, ))
+        logger.debug("Starting door_oper_thread")
+        door_oper_thread.start()
+        return statement('Operating {}.'.format(device))
+        #!! assumes thread terminates after operation
+        # logger.debug("Main    : wait for the thread to finish")
+        # x.join()
+    # if device not in DEVICEDOOR:
+    else:
+        curr_pin_state = GPIO.input(relay_pin)
         next_pin_state = None
-    if next_pin_state is not None:
-        response = 'turning {} light'.format(next_state)
-        GPIO.output(PIN_LIGHT_RELAY, next_pin_state)
-    return statement(response)
-    # if next_state in STATUSON:
-    #     GPIO.output(PIN_LIGHT_RELAY, GPIO.HIGH)
-    #     return statement('turning {} light'.format(next_state))
-    # elif next_state in STATUSOFF:
-    #     GPIO.output(PIN_LIGHT_RELAY, GPIO.LOW)
-    #     return statement('turning {} light'.format(next_state))
-    # else:
-    #     return statement('Sorry bogus requested state: {}.'.format(next_state))
-
-
-@ask.intent('AMAZON.HelpIntent')
-def help():
-    speech_text = 'You can say hello to me!'
-    return question(speech_text).reprompt(speech_text).simple_card('HelloWorld', speech_text)
+        if next_state in STATUSON:
+            next_pin_state = GPIO.HIGH
+        elif next_state in STATUSOFF:
+            next_pin_state = GPIO.LOW
+        elif next_state is None:
+            response = 'Sorry, need to specify {} on or off.'.format(device)
+        else:
+            response = 'Sorry, bogus requested state: {}.'.format(next_state)
+#        logger.debug("Device: {} > Current state: {} -- Next state: {} ".format(device, curr_pin_state, next_pin_state))
+        if curr_pin_state == next_pin_state:
+            response = 'the {} is already {}'.format(device, next_state)
+            next_pin_state = None
+        if next_pin_state is not None:
+            if device is not None:
+                response = 'turning {} {}'.format(next_state, device)
+            else:
+                response = 'turning {} lights'.format(next_state)
+            GPIO.output(relay_pin, next_pin_state)
+        return statement(response)
 
 
 @ask.session_ended
