@@ -1,0 +1,14 @@
+[Unit]
+Description=Alexa-to-Coop-Control
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/pi/coop
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=root
+ExecStart=/usr/bin/python3 -u alexa-ctrl.py
+
+[Install]
+WantedBy=multi-user.target
