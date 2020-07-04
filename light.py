@@ -1,16 +1,24 @@
 #!/usr/bin/env python3
+import sys
 from gpio_control import gpio_switch as switch
-
-PIN_LIGHT_RELAY = 24
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='Turn coop light on/off')
-    parser.add_argument('on_off', type=int, nargs='?', choices=[0, 1], default=0, help=': 0 for on; 1 for off')
+    # print("called with {}: ".format(sys.argv[0]))
+    device = None
+    if sys.argv[0].endswith("light.py"):
+        device = "lights"
+        pin = 24
+    elif sys.argv[0].endswith("heat.py"):
+        device = "heaters"
+        pin = 25
+    else:
+        sys.exit(6)
+    parser = argparse.ArgumentParser(description='Turn coop {} on/off'.format(device))
+    parser.add_argument('on_off', type=int, nargs='?', choices=[0, 1], default=0, help=': 0 for off; 1 for on')
     args = parser.parse_args()
-    # print("on_off datatype: {}".format(type(args.on_off)))
-    print("Result: {}".format(switch(PIN_LIGHT_RELAY, args.on_off)))
-
+    result = switch(pin, args.on_off)
+    sys.exit(result)
 '''
 old routine that toggled the light state for 10 seconds.
 
