@@ -2,20 +2,23 @@ def gpio_switch(pin, new_state):
     try:
         import RPi.GPIO as GPIO
     except:
-        return 4 #"error: missing RPi GPIO"
+        return "error: missing RPi GPIO"
 
-    if new_state not in [0,1] or pin not in [23, 24, 25]:
-        return 2 #"bogus request"
+    if new_state not in [0,1]:
+        return "error: called with invalid pin state: {}".format(new_state)
+
+    if pin not in [23, 24, 25]:
+        return "error: called with invalid pin number: {}".format(pin)
 
     try:
         GPIO.setwarnings(False)
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(pin, GPIO.OUT)
     except:
-        return 3 #"error: gpio setup"
+        return "error: gpio setup failed"
 
     if new_state == GPIO.input(pin):
-        return 1 #"already {}".format(new_state)
+        return "already {}".format(new_state)
     else:
         GPIO.output(pin, new_state)
-        return 0 #"success"
+        return "success"
