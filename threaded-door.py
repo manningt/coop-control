@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-#import _thread
 import threading
-from time import sleep
 import logging
 logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
@@ -13,7 +11,7 @@ def operate_door(delay):
     import RPi.GPIO as GPIO
 
     pin = 23
-    pin = 25 #AC relay pin for testing
+#    pin = 25 #AC relay pin for testing
 
     try:
         GPIO.setwarnings(False)
