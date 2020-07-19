@@ -53,8 +53,13 @@ def get_conditions(threshold=THRESHOLD):
     if not response:
         Logger.warning("Weather request failed after {} retries".format(i+1))
     else:
-        weather_dict = response.json()
-        if 'city' in weather_dict:
+        try:
+            weather_dict = response.json()
+        else:
+            Logger.error("  error in response from weather service: json error")
+        if 'city' not in weather_dict:
+        Logger.error("  error in response from weather service: city not present")
+        else:
             ts_sunrise = weather_dict['city']['sunrise'] + weather_dict['city']['timezone']
             ts_sunset = weather_dict['city']['sunset'] + weather_dict['city']['timezone']
             minutes_sunrise = (int(datetime.utcfromtimestamp(ts_sunrise).strftime('%H'))) * 60 + \
