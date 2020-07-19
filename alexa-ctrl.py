@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-#import os
 import subprocess
 
 from flask import Flask
@@ -28,8 +27,8 @@ DEVICEDOOR = ['door']
 DEVICETEST = ['test']
 
 PIN_DOOR_RELAY = 23
-PIN_LIGHT_RELAY = 24
-PIN_HEATER_RELAY = 25
+#PIN_LIGHT_RELAY = 24
+#PIN_HEATER_RELAY = 25
 
 def operate_door(delay):
     logger.debug("operate_door thread started")
@@ -120,40 +119,6 @@ def GpioIntent(device, next_state):
         return statement('Unexpected condition: command is None')
 
 
-# if device in DEVICELIGHT:
-#     relay_pin = PIN_LIGHT_RELAY
-# elif device in DEVICEHEAT:
-#     relay_pin = PIN_HEATER_RELAY
-# elif device is None:
-#     relay_pin = PIN_LIGHT_RELAY
-
-#     GPIO.setwarnings(False)
-#     GPIO.setmode(GPIO.BCM)
-#     # if (GPIO.gpio_function(PIN_LIGHT_RELAY) != GPIO.OUT):
-#     GPIO.setup(relay_pin, GPIO.OUT)
-#     else:
-#         curr_pin_state = GPIO.input(relay_pin)
-#         next_pin_state = None
-#         if next_state in STATUSON:
-#             next_pin_state = GPIO.HIGH
-#         elif next_state in STATUSOFF:
-#             next_pin_state = GPIO.LOW
-#         elif next_state is None:
-#             response = 'Sorry, need to specify {} on or off.'.format(device)
-#         else:
-#             response = 'Sorry, bogus requested state: {}.'.format(next_state)
-# #        logger.debug("Device: {} > Current state: {} -- Next state: {} ".format(device, curr_pin_state, next_pin_state))
-#         if curr_pin_state == next_pin_state:
-#             response = 'the {} is already {}'.format(device, next_state)
-#             next_pin_state = None
-#         if next_pin_state is not None:
-#             if device is not None:
-#                 response = 'turning {} {}'.format(next_state, device)
-#             else:
-#                 response = 'turning {} lights'.format(next_state)
-#             GPIO.output(relay_pin, next_pin_state)
-#         return statement(response)
-
 
 @ask.session_ended
 def session_ended():
@@ -161,8 +126,4 @@ def session_ended():
 
 
 if __name__ == '__main__':
-    # if 'ASK_VERIFY_REQUESTS' in os.environ:
-    #     verify = str(os.environ.get('ASK_VERIFY_REQUESTS', '')).lower()
-    #     if verify == 'false':
-    #         app.config['ASK_VERIFY_REQUESTS'] = False
     app.run(debug=True)
