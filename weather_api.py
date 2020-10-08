@@ -12,18 +12,28 @@ import requests
 from datetime import datetime
 
 import logging
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(
+    # filename='HISTORYlistener.log',
+    level=logging.INFO,
+    # format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
 Logger = logging.getLogger(__name__)
 # Logger.setLevel(logging.INFO)
-file_handler = logging.FileHandler('/home/pi/coop/coop_ctrl_conditions_test.log')
-formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
-file_handler.setFormatter(formatter)
-Logger.addHandler(file_handler)
+# file_handler = logging.FileHandler('/home/pi/coop/coop_ctrl_conditions_test.log')
+# file_handler = logging.FileHandler('/Users/tom/PycharmProjects/coop-control/coop_ctrl_conditions_test.log')
+# formatter    = logging.Formatter('%(asctime)s : %(levelname)s : %(name)s : %(message)s')
+# file_handler.setFormatter(formatter)
+# Logger.addHandler(file_handler)
 
 THRESHOLD = 1 # temperature threshold (in Celsius) where if the temp is going to be below, the heaters will turn on
 THRESHOLD = 21
 THRESHOLDCOUNT = 2
+
+FORECAST_SAMPLES = 24/3 #every 3 hours in 24 hours
 
 headers = {
     'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com",
@@ -31,7 +41,8 @@ headers = {
 }
 
 def get_conditions(threshold=THRESHOLD):
-    below_thold_count = -1
+    # below_thold_count = -1
+    temperature_array = []
     minutes_sunrise = 0
     minutes_sunset = 0
     response = None
@@ -55,10 +66,11 @@ def get_conditions(threshold=THRESHOLD):
     else:
         try:
             weather_dict = response.json()
-        else:
+        except:
             Logger.error("  error in response from weather service: json error")
+
         if 'city' not in weather_dict:
-        Logger.error("  error in response from weather service: city not present")
+            Logger.error("  error in response from weather service: city not present")
         else:
             ts_sunrise = weather_dict['city']['sunrise'] + weather_dict['city']['timezone']
             ts_sunset = weather_dict['city']['sunset'] + weather_dict['city']['timezone']
@@ -69,22 +81,35 @@ def get_conditions(threshold=THRESHOLD):
             Logger.debug("Sunrise: {}  -- Sunset: {}".format(minutes_sunrise, minutes_sunset))
 
             for c, value in enumerate(weather_dict['list']):
-                # the weather_dict has a list of temperatures at 3 hour intervals, so 8 intervals looks ahead 24 hours
-                Logger.debug("Temp: {} at {}".format(value['main']['temp'], value['dt_txt']))
-                if int(value['main']['temp']) < THRESHOLD:
-                    below_thold_count += 1
-                if (c >= 7):
+                # the weather_dict has a list of emperatures at 3 hour intervals, so 8 intervals looks ahead 24 hours
+                # Logger.debug("Temp: {} at {}".format(value['main']['temp'], value['dt_txt']))
+                # if int(value['main']['temp']) < THRESHOLD:
+                #     below_thold_count += 1
+                temperature_array.append(int(str(value['main']['temp']).split(".")[0]))
+                if (c >= (FORECAST_SAMPLES-1)):
                     break
 
-    return below_thold_count, minutes_sunrise, minutes_sunset
-
+    # return below_thold_count, minutes_sunrise, minutes_sunset
+    return temperature_array, minutes_sunrise, minutes_sunset
 
 if __name__ == '__main__':
+    below_thold_count = 0
     conditions = get_conditions()
-    if conditions[0] < 0:
-        Logger.info(" get_coditions failed")
-    elif conditions[0] >= THRESHOLDCOUNT:
-        Logger.info("Temperature will be below threshold")
+    # if conditions[0] < 0:
+    #     Logger.info(" get_coditions failed")
+    # elif conditions[0] >= THRESHOLDCOUNT:
+    #     Logger.info("Temperature will be below threshold")
+    # else:
+    #     Logger.info("Temperature will be above threshold")
+    if len(conditions[0]) < FORECAST_SAMPLES-1:
+        Logger.info(" get_conditions failed - list of temperatures is short")
     else:
-        Logger.info("Temperature will be above threshold")
-    # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
+        for value in conditions[0]:
+            if value < THRESHOLD:
+                below_thold_count += 1
+        if below_thold_count >= THRESHOLDCOUNT:
+            compared_to_threshold = "below"
+        else:
+            compared_to_threshold = "above"
+        Logger.info("Temperature will be {} {}: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1]))
+        # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
