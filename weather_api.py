@@ -37,7 +37,7 @@ FORECAST_SAMPLES = 24/3 #every 3 hours in 24 hours
 
 headers = {
     'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com",
-    'x-rapidapi-key': "955e325a50msh43e8a03a92ee695p1954f3jsn1327e8efa375"
+    'x-rapidapi-key': "YourKeyHere"
 }
 
 def get_conditions(threshold=THRESHOLD):
