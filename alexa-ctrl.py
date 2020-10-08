@@ -26,6 +26,8 @@ DEVICEHEAT = ['heat', 'heater']
 DEVICEDOOR = ['door']
 DEVICETEST = ['test']
 
+DOOR_DELAY = 9
+
 PIN_DOOR_RELAY = 23
 #PIN_LIGHT_RELAY = 24
 #PIN_HEATER_RELAY = 25
@@ -83,13 +85,14 @@ def GpioIntent(device, next_state):
     command = None
     if device in DEVICEDOOR:
         # spawn a thread to turn on door motor for 8 seconds and then turn it off
-        door_oper_thread = threading.Thread(target=operate_door, args=(9, ))
-        logger.debug("Starting door_oper_thread")
-        door_oper_thread.start()
-        return statement('Operating {}.'.format(device))
-        #!! assumes thread terminates after operation
-        # logger.debug("Main    : wait for the thread to finish")
-        # x.join()
+        # door_oper_thread = threading.Thread(target=operate_door, args=(9DOOR_DELAY, ))
+        # logger.debug("Starting door_oper_thread")
+        # door_oper_thread.start()
+        # return statement('Operating {}.'.format(device))
+        ##!! assumes thread terminates after operation
+        ## logger.debug("Main    : wait for the thread to finish")
+        ## x.join()
+        command = "/home/pi/coop/door.py"
     elif device in DEVICELIGHT:
         command = "/home/pi/coop/light.py {}".format(next_pin_state)
     elif device in DEVICEHEAT:
