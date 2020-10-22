@@ -1,0 +1,98 @@
+{
+    "interactionModel": {
+        "languageModel": {
+            "invocationName": "hen house",
+            "modelConfiguration": {
+                "fallbackIntentSensitivity": {
+                    "level": "LOW"
+                }
+            },
+            "intents": [
+                {
+                    "name": "AMAZON.FallbackIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.CancelIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.HelpIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.StopIntent",
+                    "samples": []
+                },
+                {
+                    "name": "AMAZON.NavigateHomeIntent",
+                    "samples": []
+                },
+                {
+                    "name": "GpioIntent",
+                    "slots": [
+                        {
+                            "name": "device",
+                            "type": "DEVICE"
+                        },
+                        {
+                            "name": "next_state",
+                            "type": "STATE"
+                        }
+                    ],
+                    "samples": [
+                        "{device} {next_state}"
+                    ]
+                }
+            ],
+            "types": [
+                {
+                    "name": "STATE",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "off"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "on"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "DEVICE",
+                    "values": [
+                        {
+                            "name": {
+                                "value": "test"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "door"
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "heat",
+                                "synonyms": [
+                                    "heater"
+                                ]
+                            }
+                        },
+                        {
+                            "name": {
+                                "value": "light",
+                                "synonyms": [
+                                    "lights"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}
