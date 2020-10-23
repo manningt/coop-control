@@ -103,23 +103,36 @@ def GpioIntent(device, next_state):
         return statement('Unsupported requested device: {}.'.format(device))
 
     if command is not None:
+        # execution blocks until the subprocess completes, so the scripts have to complete within 10 seconds
         p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         out, err = p.communicate()
-        rc = p.returncode
+        # return code not used, the string in stdout is used instead
+        #rc = p.returncode
         if err is not None:
-            logger.error("error code: {} occurred on calling: {}".format(err, command))
-        # print("rc: {}".format(rc))
-        if rc == 0:
-            return statement('turning {} {}'.format(next_state, device))
+            err_string = "error code: {} occurred on calling: {}".format(err, command)
+            logger.error(err_string)
+            return statement(err_string)
         else:
             result = out.decode("utf-8").split('\n')
+            if result[0].startswith("success"):
+                return statement('turning {} {}'.format(next_state, device))
             if result[0].startswith("already"):
-                return statement('the {} is already {}'.format(device, next_state))
+                    return statement('the {} is already {}'.format(device, next_state))
             else:
                 return statement(result[0])
+        # print("rc: {}".format(rc))
+        # if rc == 0:
+        #     return statement('turning {} {}'.format(next_state, device))
+        # else:
+        #     result = out.decode("utf-8").split('\n')
+        #     if result[0].startswith("already"):
+        #         return statement('the {} is already {}'.format(device, next_state))
+        #     else:
+        #         return statement(result[0])
     else:
-        logger.error("Unexpected condition: command is None")
-        return statement('Unexpected condition: command is None')
+        err_string = "Unexpected condition: command is None"
+        logger.error(err_string)
+        return statement(err_string)
 
 
 
