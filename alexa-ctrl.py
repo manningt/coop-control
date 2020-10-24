@@ -26,38 +26,6 @@ DEVICEHEAT = ['heat', 'heater']
 DEVICEDOOR = ['door']
 DEVICETEST = ['test']
 
-DOOR_DELAY = 9
-
-PIN_DOOR_RELAY = 23
-#PIN_LIGHT_RELAY = 24
-#PIN_HEATER_RELAY = 25
-
-def operate_door(delay):
-    logger.debug("operate_door thread started")
-    from time import sleep
-    import RPi.GPIO as GPIO
-
-    pin = PIN_DOOR_RELAY
-    # pin = PIN_HEATER_RELAY #AC relay pin for testing
-
-    try:
-        GPIO.setwarnings(False)
-        GPIO.setmode(GPIO.BCM)
-        GPIO.setup(pin, GPIO.OUT, initial=0)
-        GPIO.output(pin, 0)
-        logger.debug("Initializing relay to 0 for 4 seconds.")
-        sleep(4)
-
-        GPIO.output(pin, 1)
-        logger.info("operate_door thread: Setting relay to 1 for {} seconds.".format(delay))
-        sleep(delay)
-
-        GPIO.output(pin, 0)
-        logger.debug("Final: turning off relay.")
-    except Exception as e:
-        logger.exception(e)
-        logger.error("Exception in door relay control thread: {}".format(str(e)))
-
 
 @ask.launch
 def launch():
@@ -69,71 +37,54 @@ def launch():
 def GpioIntent(device, next_state):
     if next_state is None:
         logger.info("Slot_Device: {}  --- Slot_next_state is None".format(device))
+        response = 'Sorry, need to specify {} on or off.'.format(device)
     else:
         # logger.info("Slot_Device: {} --- Slot_next_state: {}".format(device, request.intent.slots.next_state.value))
         logger.info("Slot_Device: {} --- Slot_next_state: {}".format(device, next_state))
-
-    if next_state in STATUSON:
-        next_pin_state = 1
-    elif next_state in STATUSOFF:
-        next_pin_state = 0
-    elif next_state is None:
-        response = 'Sorry, need to specify {} on or off.'.format(device)
-    else:
-        response = 'Sorry, bogus requested state: {}.'.format(next_state)
+        if next_state in STATUSON:
+            next_pin_state = 1
+        elif next_state in STATUSOFF:
+            next_pin_state = 0
+        else:
+            next_pin_state = None
+            response = 'Sorry, unknown requested state: {} for {}.'.format(next_state, device)
 
     command = None
+    wait_for_command_complete = True
     if device in DEVICEDOOR:
-        # spawn a thread to turn on door motor for 8 seconds and then turn it off
-        # door_oper_thread = threading.Thread(target=operate_door, args=(9DOOR_DELAY, ))
-        # logger.debug("Starting door_oper_thread")
-        # door_oper_thread.start()
-        # return statement('Operating {}.'.format(device))
-        ##!! assumes thread terminates after operation
-        ## logger.debug("Main    : wait for the thread to finish")
-        ## x.join()
         command = "/home/pi/coop/door.py"
+        wait_for_command_complete = False
     elif device in DEVICELIGHT:
-        command = "/home/pi/coop/light.py {}".format(next_pin_state)
+        command = "/home/pi/coop/light.py"
     elif device in DEVICEHEAT:
-        command = "/home/pi/coop/heat.py {}".format(next_pin_state)
+        command = "/home/pi/coop/heat.py"
     elif device in DEVICETEST:
         return statement('Hen house control is operational.')
     else:
         return statement('Unsupported requested device: {}.'.format(device))
 
     if command is not None:
-        # execution blocks until the subprocess completes, so the scripts have to complete within 10 seconds
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        out, err = p.communicate()
-        # return code not used, the string in stdout is used instead
-        #rc = p.returncode
-        if err is not None:
-            err_string = "error code: {} occurred on calling: {}".format(err, command)
-            logger.error(err_string)
-            return statement(err_string)
-        else:
-            result = out.decode("utf-8").split('\n')
-            if result[0].startswith("success"):
+        if wait_for_command_complete:
+            # execution blocks until the subprocess completes, so the scripts have to complete within 10 seconds
+            result = subprocess.run([command, str(next_pin_state)], capture_output=True)
+            if result.returncode > 0:
+                err_string = "error code: {} occurred on calling: {}".format(result.returncode, command)
+                logger.error(err_string)
+                return statement(err_string)
+            result_str = result.stdout.decode("utf-8").split('\n')[0]
+            if result_str.startswith("success"):
                 return statement('turning {} {}'.format(next_state, device))
-            if result[0].startswith("already"):
-                    return statement('the {} is already {}'.format(device, next_state))
+            if result_str.startswith("already"):
+                return statement('the {} is already {}'.format(device, next_state))
             else:
-                return statement(result[0])
-        # print("rc: {}".format(rc))
-        # if rc == 0:
-        #     return statement('turning {} {}'.format(next_state, device))
-        # else:
-        #     result = out.decode("utf-8").split('\n')
-        #     if result[0].startswith("already"):
-        #         return statement('the {} is already {}'.format(device, next_state))
-        #     else:
-        #         return statement(result[0])
+                return statement(result_str)
+        else:
+            p = subprocess.Popen(command, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
+            return statement("Operating Door")
     else:
         err_string = "Unexpected condition: command is None"
         logger.error(err_string)
         return statement(err_string)
-
 
 
 @ask.session_ended
