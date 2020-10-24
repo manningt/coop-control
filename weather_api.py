@@ -11,25 +11,23 @@ from time import sleep
 import requests
 from datetime import datetime
 import subprocess
-
 import logging
+
 logging.basicConfig(
     # filename='HISTORYlistener.log',
     level=logging.INFO,
-    # format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s',
     format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
 )
 Logger = logging.getLogger(__name__)
 
-THRESHOLD = 1 # temperature threshold (in Celsius) where if the temp is going to be below, the heaters will turn on
-#THRESHOLD = 21 # used for testing
+THRESHOLD = 1  # temperature threshold (in Celsius) where if the temp is going to be below, the heaters will turn on
+# THRESHOLD = 21 # used for testing
 THRESHOLDCOUNT = 2
-LIGHT_ON_MONTHS = [3,4]
+LIGHT_ON_MONTHS = [3, 4]
 LIGHT_TURN_ON_HOUR = 5
 LIGHT_TURN_ON_MINUTE = 0
-
-FORECAST_SAMPLES = 24/3 #every 3 hours in 24 hours
+FORECAST_SAMPLES = 24 / 3  # every 3 hours in 24 hours
 
 headers = {
     'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com",
@@ -54,11 +52,11 @@ def get_conditions():
     response = None
     for i in range(5):
         try:
-            response=requests.get("https://community-open-weather-map.p.rapidapi.com/forecast", \
-                                  headers=headers, params={"units": "metric", "q": "Newburyport,us"})
+            response = requests.get("https://community-open-weather-map.p.rapidapi.com/forecast", \
+                                    headers=headers, params={"units": "metric", "q": "Newburyport,us"})
         except requests.exceptions.Timeout:
             if i > 3:
-                Logger.warning("Weather request had {} timeouts.".format(i+1))
+                Logger.warning("Weather request had {} timeouts.".format(i + 1))
             sleep(4)
         except requests.exceptions.RequestException as e:
             Logger.error("  error on request to weather service: {}".format(e))
@@ -67,7 +65,7 @@ def get_conditions():
             break
 
     if not response:
-        Logger.warning("Weather request failed after {} retries".format(i+1))
+        Logger.warning("Weather request failed after {} retries".format(i + 1))
     else:
         try:
             weather_dict = response.json()
@@ -80,16 +78,16 @@ def get_conditions():
             ts_sunrise = weather_dict['city']['sunrise'] + weather_dict['city']['timezone']
             ts_sunset = weather_dict['city']['sunset'] + weather_dict['city']['timezone']
             minutes_sunrise = (int(datetime.utcfromtimestamp(ts_sunrise).strftime('%H'))) * 60 + \
-                           int(datetime.utcfromtimestamp(ts_sunrise).strftime('%M'))
+                              int(datetime.utcfromtimestamp(ts_sunrise).strftime('%M'))
             minutes_sunset = (int(datetime.utcfromtimestamp(ts_sunset).strftime('%H'))) * 60 + \
-                           int(datetime.utcfromtimestamp(ts_sunset).strftime('%M'))
+                             int(datetime.utcfromtimestamp(ts_sunset).strftime('%M'))
             Logger.debug("Sunrise: {}  -- Sunset: {}".format(minutes_sunrise, minutes_sunset))
 
             for c, value in enumerate(weather_dict['list']):
                 # the weather_dict has a list of emperatures at 3 hour intervals, so 8 intervals looks ahead 24 hours
                 # Logger.debug("Temp: {} at {}".format(value['main']['temp'], value['dt_txt']))
                 temperature_array.append(int(str(value['main']['temp']).split(".")[0]))
-                if (c >= (FORECAST_SAMPLES-1)):
+                if (c >= (FORECAST_SAMPLES - 1)):
                     break
 
     return temperature_array, minutes_sunrise, minutes_sunset
@@ -100,7 +98,7 @@ if __name__ == '__main__':
     LIGHTS_NAME = "light"
     below_thold_count = 0
     conditions = get_conditions()
-    if len(conditions[0]) < FORECAST_SAMPLES-1:
+    if len(conditions[0]) < FORECAST_SAMPLES - 1:
         Logger.error(" get_conditions failed - list of temperatures is short")
     else:
         # turn heat on/off based on temperature threshold; the heat will stay on/off until the next time the script runs
@@ -115,7 +113,8 @@ if __name__ == '__main__':
             compared_to_threshold = "above"
             message_re_heat_control = "Turning off heat"
             switch(HEATERS_NAME, 0)
-        message_re_temperature = "Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1])
+        message_re_temperature = "Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD,
+                                                                                str(conditions[0])[1:-1])
 
         # Logger.info("Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1]))
         # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
@@ -129,7 +128,7 @@ if __name__ == '__main__':
             secondsUntilTurnOn = (lightTurnOnTime - now).seconds
             if secondsUntilTurnOn < 0:
                 secondsUntilTurnOn = 0
-            #sunrise is conditions[1] and is in minutes past midnight
+            # sunrise is conditions[1] and is in minutes past midnight
             lightOnSeconds = (conditions[1] * 60) - secondsUntilTurnOn
 
         if lightOnSeconds > 0:
@@ -140,7 +139,7 @@ if __name__ == '__main__':
             message_re_light_control = "Not operating lights"
 
         Logger.info("{}; Sunrise: {}; {}; {}".format(message_re_light_control, conditions[1], \
-                                                message_re_heat_control, message_re_temperature))
+                                                     message_re_heat_control, message_re_temperature))
         if lightOnSeconds > 0:
             sleep(lightOnSeconds)
             switch(LIGHTS_NAME, 0)
