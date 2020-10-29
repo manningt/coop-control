@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""
-program should be run before LIGHT_TURN_ON_HOUR (5AM)
-the program gets the sunrise time and 8 forecasted temperarure over the next 24 hours
-if temperature is below a threshold at least twice, then turn on heat; else turn off heat
-if the month is in LIGHT_ON_MONTHS then turn on light at 5, sleep for until sunrise+30 and turn off
-  - turning the light on in the morning is intended to lengthen the day
+""" writes a file with the temperature forecast
+2020-10-26 05:55:10.659226
+sunrise,430
+temperatures,5,6,7,11,11,11,11,11,12,13
 """
 
 from time import sleep
 import requests
 from datetime import datetime
 import subprocess
+import sys
 import logging
 
 logging.basicConfig(
@@ -27,7 +26,12 @@ THRESHOLDCOUNT = 2
 LIGHT_ON_MONTHS = [3, 4]
 LIGHT_TURN_ON_HOUR = 5
 LIGHT_TURN_ON_MINUTE = 0
-FORECAST_SAMPLES = 24 / 3  # every 3 hours in 24 hours
+# Each temperature forecast is for a 3 hour interval
+FORECAST_SAMPLES = 10
+
+TEMPERATURE_FILENAME = '/dev/shm/todays-temperatures.txt'
+SUNRISE_NAME = 'sunrise'
+TEMPERATURES_NAME = 'temperatures'
 
 headers = {
     'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com",
@@ -47,13 +51,14 @@ def switch(thing, state):
 
 def get_conditions():
     temperature_array = []
+    dt_txt_array = []
     minutes_sunrise = 0
     minutes_sunset = 0
     response = None
     for i in range(5):
         try:
             response = requests.get("https://community-open-weather-map.p.rapidapi.com/forecast", \
-                                    headers=headers, params={"units": "metric", "q": "Newburyport,us"})
+                                    headers=headers, params={"units": "metric", "zip": "01922,us"})
         except requests.exceptions.Timeout:
             if i > 3:
                 Logger.warning("Weather request had {} timeouts.".format(i + 1))
@@ -85,10 +90,12 @@ def get_conditions():
 
             for c, value in enumerate(weather_dict['list']):
                 # the weather_dict has a list of emperatures at 3 hour intervals, so 8 intervals looks ahead 24 hours
-                # Logger.debug("Temp: {} at {}".format(value['main']['temp'], value['dt_txt']))
+                # get integer temperature in celsius; strip off the fraction
                 temperature_array.append(int(str(value['main']['temp']).split(".")[0]))
+                dt_txt_array.append(value['dt_txt'])
                 if (c >= (FORECAST_SAMPLES - 1)):
                     break
+            Logger.info("forecast timestamps: {}".format(dt_txt_array))
 
     return temperature_array, minutes_sunrise, minutes_sunset
 
@@ -100,46 +107,62 @@ if __name__ == '__main__':
     conditions = get_conditions()
     if len(conditions[0]) < FORECAST_SAMPLES - 1:
         Logger.error(" get_conditions failed - list of temperatures is short")
-    else:
-        # turn heat on/off based on temperature threshold; the heat will stay on/off until the next time the script runs
-        for value in conditions[0]:
-            if value < THRESHOLD:
-                below_thold_count += 1
-        if below_thold_count >= THRESHOLDCOUNT:
-            compared_to_threshold = "below"
-            message_re_heat_control = "Turning on heat"
-            switch(HEATERS_NAME, 1)
-        else:
-            compared_to_threshold = "above"
-            message_re_heat_control = "Turning off heat"
-            switch(HEATERS_NAME, 0)
-        message_re_temperature = "Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD,
-                                                                                str(conditions[0])[1:-1])
+        sys.exit(1)
 
-        # Logger.info("Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1]))
-        # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
+    now_datetime = datetime.now()
+    try:
+        f = open(TEMPERATURE_FILENAME, "w")
+        f.write("{}\n".format(now_datetime))
+        f.write("{},{}\n".format(SUNRISE_NAME, conditions[1]))
+        temperatures_str = "{},{}\n".format(TEMPERATURES_NAME, str(conditions[0])[1:-1]).replace(" ", "")
+        f.write(temperatures_str)
+        f.close()
+    except IOError:
+        Logger.error("Could not open file for writing: {}".format(TEMPERATURE_FILENAME))
 
-        # turn on light based on month
-        lightOnSeconds = 0
-        currentMonth = datetime.now().month
-        if (currentMonth in LIGHT_ON_MONTHS):
-            now = datetime.now()
-            lightTurnOnTime = now.replace(hour=LIGHT_TURN_ON_HOUR, minute=LIGHT_TURN_ON_MINUTE, second=0, microsecond=0)
-            secondsUntilTurnOn = (lightTurnOnTime - now).seconds
-            if secondsUntilTurnOn < 0:
-                secondsUntilTurnOn = 0
-            # sunrise is conditions[1] and is in minutes past midnight
-            lightOnSeconds = (conditions[1] * 60) - secondsUntilTurnOn
-
-        if lightOnSeconds > 0:
-            sleep(secondsUntilTurnOn)
-            message_re_light_control = "Turning light on for {} minutes".format(int(lightOnSeconds / 60))
-            switch(LIGHTS_NAME, 1)
-        else:
-            message_re_light_control = "Not operating lights"
-
-        Logger.info("{}; Sunrise: {}; {}; {}".format(message_re_light_control, conditions[1], \
-                                                     message_re_heat_control, message_re_temperature))
-        if lightOnSeconds > 0:
-            sleep(lightOnSeconds)
-            switch(LIGHTS_NAME, 0)
+    if False:
+    # if len(conditions[0]) < FORECAST_SAMPLES - 1:
+    #     Logger.error(" get_conditions failed - list of temperatures is short")
+    # else:
+    #     # turn heat on/off based on temperature threshold; the heat will stay on/off until the next time the script runs
+    #     for value in conditions[0]:
+    #         if value < THRESHOLD:
+    #             below_thold_count += 1
+    #     if below_thold_count >= THRESHOLDCOUNT:
+    #         compared_to_threshold = "below"
+    #         message_re_heat_control = "Turning on heat"
+    #         switch(HEATERS_NAME, 1)
+    #     else:
+    #         compared_to_threshold = "above"
+    #         message_re_heat_control = "Turning off heat"
+    #         switch(HEATERS_NAME, 0)
+    #     message_re_temperature = "Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD,
+    #                                                                             str(conditions[0])[1:-1])
+    #
+    #     # Logger.info("Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1]))
+    #     # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
+    #
+    #     # turn on light based on month
+    #     lightOnSeconds = 0
+    #     currentMonth = datetime.now().month
+    #     if (currentMonth in LIGHT_ON_MONTHS):
+    #         now = datetime.now()
+    #         lightTurnOnTime = now.replace(hour=LIGHT_TURN_ON_HOUR, minute=LIGHT_TURN_ON_MINUTE, second=0, microsecond=0)
+    #         secondsUntilTurnOn = (lightTurnOnTime - now).seconds
+    #         if secondsUntilTurnOn < 0:
+    #             secondsUntilTurnOn = 0
+    #         # sunrise is conditions[1] and is in minutes past midnight
+    #         lightOnSeconds = (conditions[1] * 60) - secondsUntilTurnOn
+    #
+    #     if lightOnSeconds > 0:
+    #         sleep(secondsUntilTurnOn)
+    #         message_re_light_control = "Turning light on for {} minutes".format(int(lightOnSeconds / 60))
+    #         switch(LIGHTS_NAME, 1)
+    #     else:
+    #         message_re_light_control = "Not operating lights"
+    #
+    #     Logger.info("{}; Sunrise: {}; {}; {}".format(message_re_light_control, conditions[1], \
+    #                                                  message_re_heat_control, message_re_temperature))
+    #     if lightOnSeconds > 0:
+    #         sleep(lightOnSeconds)
+    #         switch(LIGHTS_NAME, 0)
