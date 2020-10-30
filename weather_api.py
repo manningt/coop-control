@@ -20,12 +20,6 @@ logging.basicConfig(
 )
 Logger = logging.getLogger(__name__)
 
-THRESHOLD = 1  # temperature threshold (in Celsius) where if the temp is going to be below, the heaters will turn on
-# THRESHOLD = 21 # used for testing
-THRESHOLDCOUNT = 2
-LIGHT_ON_MONTHS = [3, 4]
-LIGHT_TURN_ON_HOUR = 5
-LIGHT_TURN_ON_MINUTE = 0
 # Each temperature forecast is for a 3 hour interval
 FORECAST_SAMPLES = 10
 
@@ -37,16 +31,6 @@ headers = {
     'x-rapidapi-host': "community-open-weather-map.p.rapidapi.com",
     'x-rapidapi-key': "YourKeyHere"
 }
-
-def switch(thing, state):
-    cmd = "/home/pi/coop/{}.py {}".format(thing, state)
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-    out, err = p.communicate()
-    rc = p.returncode
-    if err is not None:
-        Logger.error("error code: {} occurred on calling: {}".format(err, cmd))
-    if rc > 0:
-        Logger.warning("script {} returned an non-zero return code: {}".format(cmd, rc))
 
 
 def get_conditions():
@@ -119,50 +103,3 @@ if __name__ == '__main__':
         f.close()
     except IOError:
         Logger.error("Could not open file for writing: {}".format(TEMPERATURE_FILENAME))
-
-    if False:
-    # if len(conditions[0]) < FORECAST_SAMPLES - 1:
-    #     Logger.error(" get_conditions failed - list of temperatures is short")
-    # else:
-    #     # turn heat on/off based on temperature threshold; the heat will stay on/off until the next time the script runs
-    #     for value in conditions[0]:
-    #         if value < THRESHOLD:
-    #             below_thold_count += 1
-    #     if below_thold_count >= THRESHOLDCOUNT:
-    #         compared_to_threshold = "below"
-    #         message_re_heat_control = "Turning on heat"
-    #         switch(HEATERS_NAME, 1)
-    #     else:
-    #         compared_to_threshold = "above"
-    #         message_re_heat_control = "Turning off heat"
-    #         switch(HEATERS_NAME, 0)
-    #     message_re_temperature = "Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD,
-    #                                                                             str(conditions[0])[1:-1])
-    #
-    #     # Logger.info("Temperature will be {} {} celsius: {}".format(compared_to_threshold, THRESHOLD, str(conditions[0])[1:-1]))
-    #     # Logger.info("Sunrise: {}  -- Sunset: {}".format(conditions[1], conditions[2]))
-    #
-    #     # turn on light based on month
-    #     lightOnSeconds = 0
-    #     currentMonth = datetime.now().month
-    #     if (currentMonth in LIGHT_ON_MONTHS):
-    #         now = datetime.now()
-    #         lightTurnOnTime = now.replace(hour=LIGHT_TURN_ON_HOUR, minute=LIGHT_TURN_ON_MINUTE, second=0, microsecond=0)
-    #         secondsUntilTurnOn = (lightTurnOnTime - now).seconds
-    #         if secondsUntilTurnOn < 0:
-    #             secondsUntilTurnOn = 0
-    #         # sunrise is conditions[1] and is in minutes past midnight
-    #         lightOnSeconds = (conditions[1] * 60) - secondsUntilTurnOn
-    #
-    #     if lightOnSeconds > 0:
-    #         sleep(secondsUntilTurnOn)
-    #         message_re_light_control = "Turning light on for {} minutes".format(int(lightOnSeconds / 60))
-    #         switch(LIGHTS_NAME, 1)
-    #     else:
-    #         message_re_light_control = "Not operating lights"
-    #
-    #     Logger.info("{}; Sunrise: {}; {}; {}".format(message_re_light_control, conditions[1], \
-    #                                                  message_re_heat_control, message_re_temperature))
-    #     if lightOnSeconds > 0:
-    #         sleep(lightOnSeconds)
-    #         switch(LIGHTS_NAME, 0)
