@@ -5,7 +5,6 @@ import subprocess
 
 from flask import Flask
 from flask_ask import Ask, request, session, question, statement
-import threading
 import RPi.GPIO as GPIO
 
 app = Flask(__name__)
