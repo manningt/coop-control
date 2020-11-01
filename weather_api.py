@@ -79,7 +79,7 @@ def get_conditions():
                 dt_txt_array.append(value['dt_txt'])
                 if (c >= (FORECAST_SAMPLES - 1)):
                     break
-            Logger.info("forecast timestamps: {}".format(dt_txt_array))
+            Logger.debug("forecast timestamps: {}".format(dt_txt_array))
 
     return temperature_array, minutes_sunrise, minutes_sunset
 
