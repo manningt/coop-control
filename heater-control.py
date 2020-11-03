@@ -44,20 +44,23 @@ FUDGE_SECONDS = 5 * 60
 # file datetime can be 24 hours ago, but may have fetched early plus add fudge
 MAX_DATETIME_DELTA = (24 * 60 * 60) + FUDGE_SECONDS
 
+HEATER_EXECUTABLE = "./heat.py"
+
 now_datetime = datetime.now()
 
 def switch(state):
     if os_name() == 'Linux':
-        result = subprocess.run(["/home/pi/coop/heat.py", str(state)], capture_output=True)
+        result = subprocess.run([HEATER_EXECUTABLE, str(state)], capture_output=True)
         if result.returncode > 0:
-            err_string = "error code: {} occurred on calling: /coop/heat.py".format(result.returncode)
+            err_string = "error code: {} when calling '{}' - {}".\
+                format(result.returncode, HEATER_EXECUTABLE, result.stdout)
             Logger.error(err_string)
 
 
 def file_error_exit():
     if datetime.month in [11, 12, 1, 2, 3]:
         Logger.warning("Turning on heat because a problem with the weather forecast file")
-        result = subprocess.run(["/home/pi/coop/heat.py", 1])
+        result = subprocess.run([HEATER_EXECUTABLE, 1])
     sys.exit(1)
 
 
@@ -120,10 +123,10 @@ if __name__ == '__main__':
 
     if (temperatures[temperature_forecast_index] <= TEMPERATURE_THRESHOLD ) or \
         (temperatures[temperature_forecast_index+1] <= TEMPERATURE_THRESHOLD):
-        message_re_heat_control = "Turning on heat"
+        message_re_heat_control = "Turning on heaters"
         switch(1)
     else:
-        message_re_heat_control = "Turning off heat"
+        message_re_heat_control = "Turning off heaters"
         switch(0)
 
     message_re_temperature = "Forecast temperatures: {} & {}C -> {}  (index: {})". \
