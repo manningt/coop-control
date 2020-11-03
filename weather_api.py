@@ -85,9 +85,6 @@ def get_conditions():
 
 
 if __name__ == '__main__':
-    HEATERS_NAME = "heat"
-    LIGHTS_NAME = "light"
-    below_thold_count = 0
     conditions = get_conditions()
     if len(conditions[0]) < FORECAST_SAMPLES - 1:
         Logger.error(" get_conditions failed - list of temperatures is short")
