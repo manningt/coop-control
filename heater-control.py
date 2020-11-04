@@ -8,7 +8,7 @@ The temperature array are for 3-hour periods
 If below a temperature threshold for the current or next period, then activate a relay that turns on the heaters.
 Which forecast temperature to use is calculated by subtracting the date-time stamp of the file against the now datetime.
 
-The relay switching get run only on linux (RaspberryPi), so this can be run on macos
+The relay switching gets run only on linux (RaspberryPi), so this can be run on macos
 
 Note: if using a shared memory file in /dev/shm, you'll need to do the following:
 Edit /etc/systemd/logind.conf, uncomment the line RemoveIPC=yes, change it to RemoveIPC=no, save, and reboot the system
@@ -20,6 +20,7 @@ import sys
 import subprocess
 import logging
 from platform import system as os_name
+import os
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +45,7 @@ FUDGE_SECONDS = 5 * 60
 # file datetime can be 24 hours ago, but may have fetched early plus add fudge
 MAX_DATETIME_DELTA = (24 * 60 * 60) + FUDGE_SECONDS
 
+os.chdir('/home/pi/coop')
 HEATER_EXECUTABLE = "./heat.py"
 
 now_datetime = datetime.now()
