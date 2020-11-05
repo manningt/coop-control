@@ -1,0 +1,5 @@
+{
+  "door": {"relay":23,"duration":15},
+  "light": {"relay":24},
+  "heat": {"relay":25}
+}
