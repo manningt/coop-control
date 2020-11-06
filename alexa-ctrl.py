@@ -21,6 +21,7 @@ logger.addHandler(file_handler)
 
 STATUSON = ['on', 'high']
 STATUSOFF = ['off', 'low']
+SHORT_ACTIVATION_MINUTES = 5
 
 
 @ask.launch
@@ -59,49 +60,47 @@ def GpioIntent(device, next_state):
             if 'duration' in v:
                 wait_for_command_complete = False
 
-    # the following could only happen if the device slot in the Alexa skill doesn't match the config file
+    ''' the following could only happen if the device slot in the Alexa-skill has more items for the device slot
+        than the config file '''
     if command is None:
         return statement('Unsupported device: {}.'.format(device))
 
+    # next_pin_state is an integer passed as an argument when the python script is called; its translated from on/off
     next_pin_state = None
     if next_state in STATUSON:
         next_pin_state = 1
     elif next_state in STATUSOFF:
         next_pin_state = 0
     elif next_state == 'short':
-        next_pin_state = 5
+        next_pin_state = SHORT_ACTIVATION_MINUTES
         wait_for_command_complete = False
 
-    logger.info("command: {} --- next_pin_state: {}".format(command, str(next_pin_state)))
-    if command is not None:
-        if next_pin_state is not None:
-            command = [command]
-            command.append(str(next_pin_state))
-        if wait_for_command_complete:
-            # execution blocks until the subprocess completes, so the scripts have to complete within 10 seconds
-            result = subprocess.run(command, capture_output=True)
-            if result.returncode > 0:
-                err_string = "error code: {} occurred on calling: {}".format(result.returncode, command)
-                logger.error(err_string)
-                return statement(err_string)
-            if next_state is None:
-                new_state = 'off'
-            else:
-                new_state = next_state
-            result_str = result.stdout.decode("utf-8").split('\n')[0]
-            if result_str.startswith("success"):
-                return statement('turning {} {}'.format(new_state, device))
-            if result_str.startswith("already"):
-                return statement('the {} is already {}'.format(device, new_state))
-            else:
-                return statement(result_str)
-        else:
-            p = subprocess.Popen(command, shell=True, stdin=None, stdout=None, stderr=None, close_fds=True)
-            return statement("Activating {}".format(device))
+    if next_pin_state is None:
+        verbal_state = 'off'
     else:
-        err_string = "Unexpected condition: command is None"
-        logger.error(err_string)
-        return statement(err_string)
+        verbal_state = next_state
+        command = [command]
+        command.append(str(next_pin_state))
+
+    # logger.info("command: {}".format(command))
+    if wait_for_command_complete:
+        # execution blocks until the subprocess completes, so the scripts have to complete within 10 seconds
+        result = subprocess.run(command, capture_output=True)
+        if result.returncode > 0:
+            err_string = "error code: {} occurred on calling: {}".format(result.returncode, command)
+            logger.error(err_string)
+            return statement(err_string)
+        result_str = result.stdout.decode("utf-8").split('\n')[0]
+        if result_str.startswith("success"):
+            return statement('turning {} {}'.format(verbal_state, device))
+        elif result_str.startswith("already"):
+            return statement('the {} is already {}'.format(device, verbal_state))
+        else:
+            return statement(result_str)
+    else:
+        # don't set shell=True; it mucks up the arguments sent to the process.
+        p = subprocess.Popen(command, stdin=None, stdout=None, stderr=None, close_fds=True)
+        return statement("Activating {}".format(device))
 
 
 @ask.session_ended
