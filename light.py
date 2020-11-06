@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Turn coop devices on/off')
     parser.add_argument('on_off', type=int, nargs='?', choices=range(0, 8), default=0, \
-                        help=': 0 for off; 1 for on; 7 turn on for 7 minutes')
+                        help=': 0 for off; 1 for on; 2..7 to turn on for that many minutes')
     parser.add_argument('-p', '--pin', dest='gpio_pin', type=int, nargs='?', help='GPIO pin used to activate relay')
     args = parser.parse_args()
     # print("called with {}: ".format(sys.argv[0]))
