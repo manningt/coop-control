@@ -12,7 +12,8 @@ Launched as a service on reboot.
 * weather-based: 2 python scripts which are invoked by cron to:
     * weather_api.py: & ) get the weather forecast for the next 24 hours and store it in an in-memory file
     * heater-control.py: turn the heaters based on the temperature forecast in the above mentioned file
-* web-based: (not done yet)
+* web-based: a webpage is served which has a few buttons to activate the relays so that one doesn't
+have to login to the RPi or shout at Alexa
 
 Python scripts
 --
@@ -59,6 +60,7 @@ In order to use the free ngrok, the endpoint address has to be reconfigured on A
 time the RPi reboots.
     * The [dashboard.ngrok](https://dashboard.ngrok.com/status/tunnels) lists the endpoint
     address to plug into the alexa skill webpage
+    * ```curl http://127.0.0.1:4040/api/tunnels``` on the RPi can also be used to get the tunnel ID
 * A python script (alexa-ctrl.py) which uses flask-ask to recieve the json from alexa/amazon
     * to enable alexa-ctrl.py to run when the computer boots, it needs to be run as a service.
     Here are the [instructions](https://www.wikihow.com/Execute-a-Script-at-Startup-on-the-Raspberry-Pi) I followed.
@@ -105,6 +107,18 @@ when daylight savings takes effect in mid March.
 45 8 * 3,4 * /home/pi/coop/light.py 1 >> /home/pi/coop/cron.log 2>&1
 # turn the light off at 7AM  (7AM is noon GMT
 0 12 * 3,4 * /home/pi/coop/light.py >> /home/pi/coop/cron.log 2>&1
-#
-
 ```
+Web control
+--
+The python flask module was used to create a webserver tha runs on the RPi.
+
+There are 3 items needed to enable the web server:
+* web-ctrl.py is the server which has 3 POSTs (lights on, lights off, door)
+* web-ctrl.service needs run as a service:
+    * ```sudo cp web-ctrl.service to /etc/systemd/system```
+    * ```sudo systemctl start alexa-ctrl.service```
+* index.html is copied to the templates directory
+
+The web-ctrl server uses port 44, but this can be changed.
+
+To access on my network, I set the URL to http://10.0.1.100:44
