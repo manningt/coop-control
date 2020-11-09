@@ -4,55 +4,71 @@ The chicken coop has 3 control relays:
 * door: a sliding door separates the run (an 8x8 area) and the chicken pen (a large 'free-range') area.
 The chickens squawk every morning to get let out.
 
-There are 3 software services that control the relays:
-* python scripts that turn on/off the relays; these can be called directly via ssh or used by 
+There are 4 interfaces to control the relays:
+* manual control: a python script whcih turns on/off the relays; this can be called directly via ssh or used by 
 the following 2 services (alexa, cron)
 * alexa-ctrl: responds to a custom Alexa skill commands sent to the Raspberry Pi via ngrok. 
 Launched as a service on reboot.
-* A python script (weather_api) which is invoked by cron to turn the heaters and 
-light on based on the temperature forecast and sunrise
+* weather-based: 2 python scripts which are invoked by cron to:
+    * weather_api.py: & ) get the weather forecast for the next 24 hours and store it in an in-memory file
+    * heater-control.py: turn the heaters based on the temperature forecast in the above mentioned file
+* web-based: (not done yet)
 
 Python scripts
 --
-light.py is written to be invoked from the shell. 
-It takes 0 or 1 as an argument to turn the relay on or off. 
+light.py is written to be invoked from the shell:
+* 0 or 1 as an argument will turn the relay on or off
+* 2-7 as an argument will activate the relay for that many minutes. 
+This eliminates the need to turn the device off.
+* It reads a json file which associates gpio pins to names
+* it optionally takes a gpio_pin argument to control a different gpio pin than the configured ones
+
 light.py uses a function in gpio_control.py to do the real work of controlling the hardware. 
-All hardware access is in gpio_control so if the API changes, only that module has to change.
+All hardware access is in gpio_control so if the GPIO API changes, only that module has to change.
 
 The light script will report _success_ if the state is switched, or it will return _already on/off_ if the light is
 in that state which can be used to confirm the current state.
 
-In order to minimize code/maintenance, light.py is also used to control the heater relay using
+In order to minimize code/maintenance, light.py is also used to control the heater and door relays using
 a symbolic link (`ln -s light.py heat.py`);
 light.py looks at argv[0] to determine if its been called with heat or light.
 
 Controlling the door motor requires turning on the relay for around 15 seconds, and then turning the relay off.
-The script `timed-gpio-activiation.py` when run without any arguments is used to operate the door. 
+The json gpio_pin to name config file also supports specifying the duration the relay should be on.
+ 
 The Alexa service expects a response from the device (RPi in this case) within 10 seconds.
-Therefore this script is run without waiting for it to complete before returning the response to Alexa.
+Therefore if the script invoked by Alexa will execute sleep delays,
+the script is run without waiting for it to complete before returning the response to Alexa.
 
 An issue with the door is the current state (open/closed) is not known by the hardware.  The script just runs the
 motor which will reverse the state.  Ideally you'd be able to say door open or close so that you would know what
 the state is, since it's highly desirable not to leave the door open at night.
 
-The `timed-gpio-activiation.py` script can also be used to turn on the lights momentarily (5 minutes) thereby
-eliminating the need to turn them off, which can sometimes be forgotten.
-And it can be used to turn on the heaters for a period, when called from the cron job.
-
 Alexa files
 --
 Amazon's Alexa service sends json to the Raspberry Pi when a custom skill is invoked.
+Here is a [tutorial](https://www.instructables.com/Control-Raspberry-Pi-GPIO-With-Amazon-Echo-and-Pyt/) that I used as a model.
+
 The full set of things/services needed for a custom skill are:
 * A skill which is created on https://developer.amazon.com/alexa/
     * alexa-custom-skill.json can be pasted into your skill
     * the skill I created is invoked by saying "tell hen house lights on"
     * this phrase works with the Alexa App _and_ an Echo Dot _if you hold down the Action_ button.
-* A web service (I used [ngrok](dashboard.ngrok.com/status/tunnels)) to get the json to the RPi which is behind a router.
-In order to use the free ngrok, the endpoint address has to be reconfigured on ALexa developer webpage every
-time the RPi reboots. 
+* A web service (I used [ngrok](ngrok.com/doc)) to get the json to the RPi which is behind a router.
+In order to use the free ngrok, the endpoint address has to be reconfigured on Alexa developer webpage every
+time the RPi reboots.
+    * The [dashboard.ngrok](https://dashboard.ngrok.com/status/tunnels) lists the endpoint
+    address to plug into the alexa skill webpage
 * A python script (alexa-ctrl.py) which uses flask-ask to recieve the json from alexa/amazon
-
-Here is a [tutorial](https://www.instructables.com/Control-Raspberry-Pi-GPIO-With-Amazon-Echo-and-Pyt/) that I used as a model.
+    * to enable alexa-ctrl.py to run when the computer boots, it needs to be run as a service.
+    Here are the [instructions](https://www.wikihow.com/Execute-a-Script-at-Startup-on-the-Raspberry-Pi) I followed.
+    * ```sudo cp alexa-ctrl.service to /etc/systemd/system```
+    * Use the following to control the service:
+```
+sudo systemctl start alexa-ctrl.service
+sudo systemctl status alexa-ctrl.service
+sudo systemctl stop alexa-ctrl.service
+```
 
 Weather based control
 --
