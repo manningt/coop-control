@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Coop-Control</title>
+</head>
+<style>
+* {
+    font-family: sans-serif;
+    color: white;
+    background: black;
+}
+h1 { font-size: 2vw; }
+h2 { font-size: 1vw; }
+
+.block_b {
+  width: 30vw;
+  font-size: 4vw;
+  color: white;
+  background: #555555;
+  padding: 1vw;
+  border: 1vw solid #494949;
+  border-radius: 8px;
+  display: block;
+  transition: all 0.3s ease 0s;
+}
+/* hover doesn't work on ios/android */
+.block_b:hover {
+  background-color: #ddd;
+  color: black;
+  border-radius: 50px;
+  border-color: #494949;
+}
+
+@media screen and (max-width: 600px) {
+    h1 { font-size: 8vw; }
+    h2 { font-size: 6vw; }
+    .block_b {
+        width: 80vw;
+        font-size: 8vw;
+    }
+}
+</style>
+
+<body>
+<h1>Coop Control</h1>
+<h2>{{ action_message }}</h2>
+    <button class="block_b" type="lights_on" onclick="window.location.href='{{ url_for('lights_on') }}';">Turn lights
+        on
+    </button>
+    <br>
+    <button class="block_b" type="lights_off" onclick="window.location.href='{{ url_for('lights_off') }}';">Turn
+        lights off
+    </button>
+    <br>
+    <button class="block_b" type="door" onclick="window.location.href='{{ url_for('door') }}';">Activate door
+    </button>
+</body>
+</html>
