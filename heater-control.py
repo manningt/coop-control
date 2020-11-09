@@ -123,15 +123,16 @@ if __name__ == '__main__':
     if temperature_forecast_index == 0:
         Logger.info("time_in_file: {};  forecast: {}".format(file_datetime, temperatures))
 
+    message_re_temperature = "Forecast temperatures: {} & {}C  (index: {})". \
+        format(temperatures[temperature_forecast_index], temperatures[temperature_forecast_index+1], \
+               temperature_forecast_index)
+
+    #only logging when turning on heaters in order to save writes to flash file system
     if (temperatures[temperature_forecast_index] <= TEMPERATURE_THRESHOLD ) or \
         (temperatures[temperature_forecast_index+1] <= TEMPERATURE_THRESHOLD):
-        message_re_heat_control = "Turning on heaters"
+        Logger.info("Turning on heaters; " + message_re_temperature)
         switch(1)
     else:
-        message_re_heat_control = "Turning off heaters"
         switch(0)
 
-    message_re_temperature = "Forecast temperatures: {} & {}C -> {}  (index: {})". \
-        format(temperatures[temperature_forecast_index], temperatures[temperature_forecast_index+1], \
-               message_re_heat_control, temperature_forecast_index)
-    Logger.info(message_re_temperature)
+
