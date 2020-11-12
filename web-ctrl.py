@@ -10,7 +10,7 @@ ACTION_MSG_DOOR = "Activating door..."
 ACTION_MSG_LIGHTS_ON = "Turning on lights..."
 ACTION_MSG_LIGHTS_OFF = "Turning off lights..."
 MAIN_TEMPLATE = 'index.html'
-SCRIPTS_DIRECTORY = '/home/pi/coop/'
+SCRIPTS_DIRECTORY = './'
 COMMAND_LIGHTS_OFF = SCRIPTS_DIRECTORY + 'light.py'
 COMMAND_LIGHTS_ON = [COMMAND_LIGHTS_OFF, '1']
 COMMAND_ACTIVATE_DOOR = SCRIPTS_DIRECTORY + 'door.py'
@@ -33,6 +33,7 @@ def lights_off():
 
 @app.route("/door/", methods=DEFAULT_METHODS)
 def door():
+    subprocess.Popen(COMMAND_ACTIVATE_DOOR, stdin=None, stdout=None, stderr=None, close_fds=True)
     return render_template(MAIN_TEMPLATE, action_message=ACTION_MSG_DOOR);
 
 if __name__ == '__main__':
