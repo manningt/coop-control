@@ -60,7 +60,7 @@ The full set of things/services needed for a custom skill are:
     * alexa-custom-skill.json can be pasted into your skill
     * the skill I created is invoked by saying "tell hen house lights on"
     * this phrase works with the Alexa App _and_ an Echo Dot _if you hold down the Action_ button.
-* A web service (I used [ngrok](ngrok.com/doc)) to get the json to the RPi which is behind a router.
+* A web service (I used [ngrok](github.com/vincenthsu/systemd-ngrok)) to get the json to the RPi which is behind a router.
 In order to use the free ngrok, the endpoint address has to be reconfigured on Alexa developer webpage every
 time the RPi reboots.
     * The [dashboard.ngrok](https://dashboard.ngrok.com/status/tunnels) lists the endpoint
