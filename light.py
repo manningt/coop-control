@@ -13,6 +13,15 @@ import argparse
 from time import sleep
 from gpio_control import gpio_switch as switch
 
+import logging
+
+logging.basicConfig(
+    format='%(asctime)s.%(msecs)03d %(levelname)s %(module)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename="command.log",
+)
+Logger = logging.getLogger(__name__)
+Logger.setLevel(logging.INFO)
 
 if __name__ == '__main__':
     GPIO_CFG_FILENAME = 'gpio-cfg.json'
@@ -25,7 +34,7 @@ if __name__ == '__main__':
                         help=': 0 for off; 1 for on; 2..7 to turn on for that many minutes')
     parser.add_argument('-p', '--pin', dest='gpio_pin', type=int, nargs='?', help='GPIO pin used to activate relay')
     args = parser.parse_args()
-    # print("called with {}: ".format(sys.argv[0]))
+    Logger.info("called with: {}".format(sys.argv[1:]))
     # print("on_off: {}  gpio_pin: {}".format(args.on_off, args.gpio_pin))
 
     if args.gpio_pin is None:
@@ -33,13 +42,13 @@ if __name__ == '__main__':
         try:
             f = open(GPIO_CFG_FILENAME)
         except:
-            print("Missing config file: {}".format(GPIO_CFG_FILENAME))
+            Logger.error("Missing config file: {}".format(GPIO_CFG_FILENAME))
             sys.exit(shell_rc)
 
         try:
             relay_cfg_dict = json.load(f)
         except:
-            print("Bad json format in config file: {}".format(GPIO_CFG_FILENAME))
+            Logger.error("Bad json format in config file: {}".format(GPIO_CFG_FILENAME))
             sys.exit(shell_rc)
         f.close()
 
@@ -53,7 +62,7 @@ if __name__ == '__main__':
         pin = args.gpio_pin
 
     if pin is None:
-        print("unrecognized device: {}".format(sys.argv[0]))
+        Logger.error("unrecognized device: {}".format(sys.argv[0]))
         sys.exit(shell_rc)
 
     if duration is None and args.on_off > 1:
@@ -62,16 +71,18 @@ if __name__ == '__main__':
 
     if duration is None:
         result = switch(pin, args.on_off)
-        print(result)
         if 'success' in result or 'already' in result:
             shell_rc = 0
+            Logger.info(result)
+        else:
+            Logger.error(result)
         sys.exit(shell_rc)
     else:
         # switching off first, in case it was left on; this is important for the motor
         result = switch(pin, 0)
         sleep(1)
         if 'error' in result:
-            print(result)
+            Logger.error(result)
             sys.exit(1)
         result = switch(pin, 1)
         sleep(duration)
