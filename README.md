@@ -12,9 +12,8 @@ There are 4 interfaces to control the relays:
 the following 3 services (alexa, cron, web)
 * alexa-ctrl: responds to a custom Alexa skill commands sent to the Raspberry Pi via ngrok. 
 Launched as a service on reboot.
-* weather-based: 2 python scripts which are invoked by cron to:
-    * weather_api.py: & ) get the weather forecast for the next 24 hours and store it in an in-memory file
-    * heater-control.py: turn the heaters based on the temperature forecast in the above mentioned file
+* weather-based: 
+    * weather_heater.py gets the current temperature an turns on (or off) the heater based on above or below thresholds.
 * web-based: a webpage is served which has a few buttons to activate the relays so that one doesn't
 have to login to the RPi or shout at Alexa.  This webpage is only available on the local WiFi network; one has to
 use Alexa if controlling the coop devices remotely.  For some unknown reason, it takes 10 or more seconds
@@ -77,8 +76,10 @@ sudo systemctl status alexa-ctrl.service
 sudo systemctl stop alexa-ctrl.service
 ```
 
-Weather based control
+Previous version Weather based control
 --
+This version used community-open-weather-map.p.rapidapi.com, which is no longer free.
+
 There are 2 python scripts to control the heaters based on forecast temperatures.
 Both of these scripts are invoked by cron.
 * weather_api.py gets a weather forecast using the [OpenWeatherMap](https://rapidapi.com/blog/weather-api-python/)
